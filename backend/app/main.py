@@ -1,30 +1,25 @@
-from typing import TypeVar
-from dataclasses import dataclass
-from optparse import Option
+from __future__ import annotations
+
+from flask import Flask, jsonify
+
+from app.api.error_handlers import register_error_handlers
+from app.api.router import register_routers
 
 
-@dataclass
-class C():
-    A: int
-    B: str = "24"
+def create_app() -> Flask:
+    app = Flask(__name__)
+    register_routers(app)
+    register_error_handlers(app)
+
+    @app.get("/healthz")
+    def health_check():
+        return jsonify({"status": "ok"})
+
+    return app
 
 
-T = TypeVar("T", C, int)
-
-
-def aaa[T](a: T) -> T:
-    return a
-
-
-def main():
-    c = C(1)
-    a = aaa(1)
-    a = getattr(c, "d", "2")
-    a = 12
-    a = type(a)
-    setattr(c, "A", 23)
-    print(a)
+app = create_app()
 
 
 if __name__ == "__main__":
-    main()
+    app.run(host="0.0.0.0", port=8000, debug=True)
