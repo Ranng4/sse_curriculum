@@ -13,6 +13,7 @@ backend/
       router.py
       routers/
         auth.py
+        forum.py
         profile.py
         suitability.py
     core/
@@ -51,6 +52,11 @@ backend/
 - 问卷获取
 - 问卷提交与风险等级计算
 - 评估结果查询
+
+3. 论坛板块
+- 默认内置市场讨论区、主题专区、公司研究专区、问答求助区
+- 支持按分类单独路由访问
+- 支持板块新增、修改、删除
 
 3. 个人资料管理
 - 基本信息维护：昵称、头像、简介、经验标签
