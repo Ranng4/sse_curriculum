@@ -2,8 +2,8 @@
 
 ## 1. 设计说明
 
-当前后端运行使用内存仓储，数据库设计用于部署阶段落库。  
-SQL 脚本位置：`backend/sql/schema.sql`（MySQL 8.x）。
+当前后端已切换为 SQLite 持久化，默认数据库文件：`backend/data/soft_resign.sqlite3`。  
+仓储层通过 SQLite 保存对象数据与关系数据，应用重启后数据可保留。
 
 ## 2. 核心实体
 
@@ -93,4 +93,5 @@ erDiagram
 1. `app/models/user.py` 对应用户/认证/偏好/隐私实体
 2. `app/models/forum.py` 对应板块实体
 3. `app/models/content.py` 对应帖子与评论实体
-4. `app/repositories/*` 为内存实现，后续可按该文档替换为数据库实现
+4. `app/repositories/sqlite_backend.py` 负责 SQLite 初始化与连接管理
+5. `app/repositories/*` 当前仓储类名保留 `InMemory*`，但实现已切到 SQLite

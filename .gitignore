@@ -11,3 +11,6 @@ wheels/
 
 
 *docx
+
+# SQLite local data
+backend/data/*.sqlite3

@@ -1,89 +1,115 @@
 from __future__ import annotations
 
-from copy import deepcopy
-from dataclasses import replace
-
 from app.core.errors import ConflictError, NotFoundError
 from app.models.user import User
+from app.repositories.sqlite_backend import decode_payload, encode_payload, get_connection
 
 
 class InMemoryUserRepository:
-    def __init__(self) -> None:
-        self._users: dict[str, User] = {}
-        self._phone_index: dict[str, str] = {}
-        self._email_index: dict[str, str] = {}
-        self._wechat_index: dict[str, str] = {}
-        self._weibo_index: dict[str, str] = {}
+    """
+    Backward-compatible class name; now backed by SQLite persistence.
+    """
 
     def create(self, user: User) -> User:
         self._check_index_conflict(user)
-        self._users[user.id] = deepcopy(user)
-        self._refresh_indexes(user)
-        return deepcopy(user)
+        with get_connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO users (id, phone, email, wechat_open_id, weibo_open_id, payload)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    user.id,
+                    user.auth.phone,
+                    user.auth.email,
+                    user.auth.wechat_open_id,
+                    user.auth.weibo_open_id,
+                    encode_payload(user),
+                ),
+            )
+            conn.commit()
+        return self.get(user.id)
 
     def save(self, user: User) -> User:
-        if user.id not in self._users:
-            raise NotFoundError("user not found")
         self._check_index_conflict(user)
-        self._users[user.id] = deepcopy(user)
-        self._refresh_indexes(user)
-        return deepcopy(user)
+        with get_connection() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE users
+                SET phone = ?, email = ?, wechat_open_id = ?, weibo_open_id = ?, payload = ?
+                WHERE id = ?
+                """,
+                (
+                    user.auth.phone,
+                    user.auth.email,
+                    user.auth.wechat_open_id,
+                    user.auth.weibo_open_id,
+                    encode_payload(user),
+                    user.id,
+                ),
+            )
+            conn.commit()
+        if cursor.rowcount == 0:
+            raise NotFoundError("user not found")
+        return self.get(user.id)
 
     def get(self, user_id: str) -> User:
-        user = self._users.get(user_id)
-        if user is None:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT payload FROM users WHERE id = ?",
+                (user_id,),
+            ).fetchone()
+        if row is None:
             raise NotFoundError("user not found")
-        return deepcopy(user)
+        return decode_payload(row["payload"])
 
     def find_by_phone(self, phone: str) -> User | None:
-        user_id = self._phone_index.get(phone)
-        return self.get(user_id) if user_id else None
+        return self._find_by_field("phone", phone)
 
     def find_by_email(self, email: str) -> User | None:
-        user_id = self._email_index.get(email)
-        return self.get(user_id) if user_id else None
+        return self._find_by_field("email", email)
 
     def find_by_wechat_open_id(self, open_id: str) -> User | None:
-        user_id = self._wechat_index.get(open_id)
-        return self.get(user_id) if user_id else None
+        return self._find_by_field("wechat_open_id", open_id)
 
     def find_by_weibo_open_id(self, open_id: str) -> User | None:
-        user_id = self._weibo_index.get(open_id)
-        return self.get(user_id) if user_id else None
+        return self._find_by_field("weibo_open_id", open_id)
+
+    def _find_by_field(self, field: str, value: str) -> User | None:
+        with get_connection() as conn:
+            row = conn.execute(
+                f"SELECT id FROM users WHERE {field} = ?",
+                (value,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self.get(row["id"])
 
     def _check_index_conflict(self, user: User) -> None:
         auth = user.auth
         if auth.phone:
-            owner = self._phone_index.get(auth.phone)
+            owner = self._find_owner_id("phone", auth.phone)
             if owner and owner != user.id:
                 raise ConflictError("phone already exists")
         if auth.email:
-            owner = self._email_index.get(auth.email)
+            owner = self._find_owner_id("email", auth.email)
             if owner and owner != user.id:
                 raise ConflictError("email already exists")
         if auth.wechat_open_id:
-            owner = self._wechat_index.get(auth.wechat_open_id)
+            owner = self._find_owner_id("wechat_open_id", auth.wechat_open_id)
             if owner and owner != user.id:
                 raise ConflictError("wechat account already exists")
         if auth.weibo_open_id:
-            owner = self._weibo_index.get(auth.weibo_open_id)
+            owner = self._find_owner_id("weibo_open_id", auth.weibo_open_id)
             if owner and owner != user.id:
                 raise ConflictError("weibo account already exists")
 
-    def _refresh_indexes(self, user: User) -> None:
-        self._remove_index_for_user(user.id)
-        if user.auth.phone:
-            self._phone_index[user.auth.phone] = user.id
-        if user.auth.email:
-            self._email_index[user.auth.email] = user.id
-        if user.auth.wechat_open_id:
-            self._wechat_index[user.auth.wechat_open_id] = user.id
-        if user.auth.weibo_open_id:
-            self._weibo_index[user.auth.weibo_open_id] = user.id
-
-    def _remove_index_for_user(self, user_id: str) -> None:
-        self._phone_index = {k: v for k, v in self._phone_index.items() if v != user_id}
-        self._email_index = {k: v for k, v in self._email_index.items() if v != user_id}
-        self._wechat_index = {k: v for k, v in self._wechat_index.items() if v != user_id}
-        self._weibo_index = {k: v for k, v in self._weibo_index.items() if v != user_id}
-
+    def _find_owner_id(self, field: str, value: str) -> str | None:
+        with get_connection() as conn:
+            row = conn.execute(
+                f"SELECT id FROM users WHERE {field} = ?",
+                (value,),
+            ).fetchone()
+        if row is None:
+            return None
+        return row["id"]

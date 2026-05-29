@@ -55,15 +55,19 @@ cd backend
 uv run python -m unittest -v tests.test_forum_routes tests.test_content_routes tests.test_social_routes
 ```
 
-## 6. 数据库初始化（可选，部署版）
+## 6. SQLite 持久化说明
 
-如果落库到 MySQL，请先创建数据库后执行：
+系统默认使用 SQLite，首次启动会自动创建数据库文件：
 
-```sql
-source backend/sql/schema.sql;
+- 默认路径：`backend/data/soft_resign.sqlite3`
+- 自定义路径：设置环境变量 `SOFT_RESIGN_SQLITE_PATH`
+
+PowerShell 示例：
+
+```powershell
+$env:SOFT_RESIGN_SQLITE_PATH="D:\\data\\soft_resign.sqlite3"
+python -m app.main
 ```
-
-当前课程实现默认使用内存仓储，不强依赖数据库。
 
 ## 7. 常见问题
 

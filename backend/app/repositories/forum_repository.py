@@ -1,60 +1,117 @@
 from __future__ import annotations
 
-from copy import deepcopy
-
 from app.core.errors import ConflictError, NotFoundError
 from app.models.forum import ForumBoard, ForumBoardCategory
+from app.repositories.sqlite_backend import decode_payload, encode_payload, get_connection
 
 
 class InMemoryForumBoardRepository:
+    """
+    Backward-compatible class name; now backed by SQLite persistence.
+    """
+
     def __init__(self) -> None:
-        self._boards: dict[str, ForumBoard] = {}
-        self._slug_index: dict[str, str] = {}
         self._seed_defaults()
 
     def list(self) -> list[ForumBoard]:
-        return [deepcopy(board) for board in self._boards.values()]
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT payload FROM forum_boards ORDER BY sort_order ASC, created_at ASC"
+            ).fetchall()
+        return [decode_payload(row["payload"]) for row in rows]
 
     def get(self, board_id: str) -> ForumBoard:
-        board = self._boards.get(board_id)
-        if board is None:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT payload FROM forum_boards WHERE id = ?",
+                (board_id,),
+            ).fetchone()
+        if row is None:
             raise NotFoundError("forum board not found")
-        return deepcopy(board)
+        return decode_payload(row["payload"])
 
     def find_by_slug(self, slug: str) -> ForumBoard | None:
-        board_id = self._slug_index.get(slug)
-        return self.get(board_id) if board_id else None
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT payload FROM forum_boards WHERE slug = ?",
+                (slug,),
+            ).fetchone()
+        if row is None:
+            return None
+        return decode_payload(row["payload"])
 
     def create(self, board: ForumBoard) -> ForumBoard:
         self._check_conflict(board)
-        self._boards[board.id] = deepcopy(board)
-        self._refresh_indexes(board)
-        return deepcopy(board)
+        with get_connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO forum_boards
+                (id, slug, category, market, sort_order, is_active, created_at, payload)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    board.id,
+                    board.slug,
+                    board.category.value,
+                    board.market,
+                    board.sort_order,
+                    1 if board.is_active else 0,
+                    board.created_at.isoformat(),
+                    encode_payload(board),
+                ),
+            )
+            conn.commit()
+        return self.get(board.id)
 
     def save(self, board: ForumBoard) -> ForumBoard:
-        if board.id not in self._boards:
-            raise NotFoundError("forum board not found")
         self._check_conflict(board)
-        self._boards[board.id] = deepcopy(board)
-        self._refresh_indexes(board)
-        return deepcopy(board)
+        with get_connection() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE forum_boards
+                SET slug = ?, category = ?, market = ?, sort_order = ?, is_active = ?, payload = ?
+                WHERE id = ?
+                """,
+                (
+                    board.slug,
+                    board.category.value,
+                    board.market,
+                    board.sort_order,
+                    1 if board.is_active else 0,
+                    encode_payload(board),
+                    board.id,
+                ),
+            )
+            conn.commit()
+        if cursor.rowcount == 0:
+            raise NotFoundError("forum board not found")
+        return self.get(board.id)
 
     def delete(self, board_id: str) -> None:
-        if board_id not in self._boards:
+        with get_connection() as conn:
+            cursor = conn.execute(
+                "DELETE FROM forum_boards WHERE id = ?",
+                (board_id,),
+            )
+            conn.commit()
+        if cursor.rowcount == 0:
             raise NotFoundError("forum board not found")
-        del self._boards[board_id]
-        self._slug_index = {slug: saved_id for slug, saved_id in self._slug_index.items() if saved_id != board_id}
 
     def _check_conflict(self, board: ForumBoard) -> None:
-        existing = self._slug_index.get(board.slug)
-        if existing and existing != board.id:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT id FROM forum_boards WHERE slug = ?",
+                (board.slug,),
+            ).fetchone()
+        if row and row["id"] != board.id:
             raise ConflictError("forum board slug already exists")
 
-    def _refresh_indexes(self, board: ForumBoard) -> None:
-        self._slug_index = {slug: saved_id for slug, saved_id in self._slug_index.items() if saved_id != board.id}
-        self._slug_index[board.slug] = board.id
-
     def _seed_defaults(self) -> None:
+        with get_connection() as conn:
+            row = conn.execute("SELECT COUNT(1) AS c FROM forum_boards").fetchone()
+        if row and row["c"] > 0:
+            return
+
         defaults = [
             ForumBoard(
                 slug="a-share",

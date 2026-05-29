@@ -1,6 +1,6 @@
 # Backend User System (Flask)
 
-本目录实现了“注册认证 + 个人资料管理 + 适当性评估”的后端基础版本，采用 Flask + Pydantic 的分层结构，便于后续替换数据库和第三方服务。
+本目录实现了“注册认证 + 个人资料管理 + 适当性评估”的后端基础版本，采用 Flask + Pydantic 的分层结构，当前默认使用 SQLite 持久化。
 
 ## 目录结构
 
@@ -94,5 +94,5 @@ python -m app.main
 
 ## 说明
 
-- 当前仓储层为内存实现（`InMemory*Repository`），重启后数据会清空。
-- 若要接入 MySQL/PostgreSQL，可仅替换 `repositories` 实现，`services` 与 `api` 层保持不变。
+- 当前仓储默认落盘到 `backend/data/soft_resign.sqlite3`。
+- 可通过环境变量 `SOFT_RESIGN_SQLITE_PATH` 指定数据库文件路径。
