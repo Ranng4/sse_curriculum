@@ -99,4 +99,5 @@ onMounted(fetchData)
       </div>
     </div>
   </template>
+</div>
 </template>
