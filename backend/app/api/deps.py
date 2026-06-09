@@ -10,6 +10,7 @@ from app.repositories.token_repository import InMemoryTokenRepository
 from app.repositories.forum_repository import InMemoryForumBoardRepository
 from app.repositories.social_repository import InMemorySocialRepository
 from app.repositories.user_repository import InMemoryUserRepository
+from app.services.admin_service import AdminService
 from app.services.content_service import ContentService
 from app.services.forum_service import ForumService
 from app.services.auth_service import AuthService
@@ -33,6 +34,7 @@ class ServiceContainer:
     user_service: UserService
     content_service: ContentService
     social_service: SocialService
+    admin_service: AdminService
 
 
 def create_service_container() -> ServiceContainer:
@@ -59,6 +61,12 @@ def create_service_container() -> ServiceContainer:
         social_repository=social_repository,
         user_repository=user_repository,
     )
+    admin_service = AdminService(
+        user_repository=user_repository,
+        content_repository=content_repository,
+        forum_repository=forum_repository,
+        social_repository=social_repository,
+    )
     return ServiceContainer(
         user_repository=user_repository,
         token_repository=token_repository,
@@ -72,6 +80,7 @@ def create_service_container() -> ServiceContainer:
         user_service=user_service,
         content_service=content_service,
         social_service=social_service,
+        admin_service=admin_service,
     )
 
 
@@ -104,6 +113,10 @@ def get_content_service() -> ContentService:
 
 def get_social_service() -> SocialService:
     return CONTAINER.social_service
+
+
+def get_admin_service() -> AdminService:
+    return CONTAINER.admin_service
 
 
 def _extract_bearer_token(request: Request) -> str | None:
