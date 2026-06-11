@@ -17,6 +17,9 @@ const routes = [
       { path: 'profile/:userId', name: 'user-profile', component: () => import('@/views/profile/UserProfilePage.vue') },
       { path: 'profile/me/edit', name: 'edit-profile', component: () => import('@/views/profile/EditProfilePage.vue') },
       { path: 'suitability', name: 'suitability', component: () => import('@/views/profile/SuitabilityPage.vue') },
+      { path: 'admin', name: 'admin-dashboard', component: () => import('@/views/admin/AdminDashboard.vue') },
+      { path: 'admin/posts', name: 'admin-posts', component: () => import('@/views/admin/AdminPostsPage.vue') },
+      { path: 'admin/users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersPage.vue') },
     ],
   },
   {
