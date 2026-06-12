@@ -90,6 +90,20 @@ CREATE TABLE IF NOT EXISTS access_tokens (
   user_id TEXT NOT NULL,
   expires_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  from_id TEXT NOT NULL,
+  to_id TEXT NOT NULL,
+  content TEXT NOT NULL,
+  image_url TEXT,
+  created_at TEXT NOT NULL,
+  is_read INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(from_id, to_id);
+
+CREATE INDEX IF NOT EXISTS idx_messages_to_read ON messages(to_id, is_read);
 """
 
 
