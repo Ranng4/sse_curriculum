@@ -10,7 +10,9 @@ from app.repositories.token_repository import InMemoryTokenRepository
 from app.repositories.forum_repository import InMemoryForumBoardRepository
 from app.repositories.social_repository import InMemorySocialRepository
 from app.repositories.user_repository import InMemoryUserRepository
+from app.repositories.message_repository import MessageRepository
 from app.services.admin_service import AdminService
+from app.services.message_service import MessageService
 from app.services.content_service import ContentService
 from app.services.forum_service import ForumService
 from app.services.auth_service import AuthService
@@ -27,6 +29,7 @@ class ServiceContainer:
     forum_repository: InMemoryForumBoardRepository
     content_repository: InMemoryContentRepository
     social_repository: InMemorySocialRepository
+    message_repository: MessageRepository
     suitability_service: SuitabilityService
     forum_service: ForumService
     auth_service: AuthService
@@ -35,6 +38,7 @@ class ServiceContainer:
     content_service: ContentService
     social_service: SocialService
     admin_service: AdminService
+    message_service: MessageService
 
 
 def create_service_container() -> ServiceContainer:
@@ -43,6 +47,7 @@ def create_service_container() -> ServiceContainer:
     forum_repository = InMemoryForumBoardRepository()
     content_repository = InMemoryContentRepository()
     social_repository = InMemorySocialRepository()
+    message_repository = MessageRepository()
     suitability_service = SuitabilityService()
     forum_service = ForumService(board_repository=forum_repository)
     auth_service = AuthService(user_repository=user_repository, token_repository=token_repository)
@@ -67,6 +72,10 @@ def create_service_container() -> ServiceContainer:
         forum_repository=forum_repository,
         social_repository=social_repository,
     )
+    message_service = MessageService(
+        message_repository=message_repository,
+        user_repository=user_repository,
+    )
     return ServiceContainer(
         user_repository=user_repository,
         token_repository=token_repository,
@@ -81,6 +90,8 @@ def create_service_container() -> ServiceContainer:
         content_service=content_service,
         social_service=social_service,
         admin_service=admin_service,
+        message_repository=message_repository,
+        message_service=message_service,
     )
 
 
@@ -117,6 +128,10 @@ def get_social_service() -> SocialService:
 
 def get_admin_service() -> AdminService:
     return CONTAINER.admin_service
+
+
+def get_message_service() -> MessageService:
+    return CONTAINER.message_service
 
 
 def _extract_bearer_token(request: Request) -> str | None:

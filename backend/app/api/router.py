@@ -9,6 +9,7 @@ from app.api.routers.profile import profile_bp
 from app.api.routers.social import social_bp
 from app.api.routers.suitability import suitability_bp
 from app.api.routers.admin import admin_bp
+from app.api.routers.messages import messages_bp
 
 
 def register_routers(app: Flask) -> None:
@@ -19,3 +20,4 @@ def register_routers(app: Flask) -> None:
     app.register_blueprint(content_bp, url_prefix="/api/v1/content")
     app.register_blueprint(social_bp, url_prefix="/api/v1/social")
     app.register_blueprint(admin_bp, url_prefix="/api/v1/admin")
+    app.register_blueprint(messages_bp, url_prefix="/api/v1")
