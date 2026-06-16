@@ -65,6 +65,9 @@ const navLinks = [
       <!-- Auth -->
       <div class="hidden md:flex items-center gap-2">
         <template v-if="auth.isLoggedIn">
+          <router-link to="/messages" class="text-blue-100 hover:text-white text-sm no-underline transition-colors">
+            私信
+          </router-link>
           <router-link to="/admin" class="text-blue-100 hover:text-white text-sm no-underline transition-colors">
             管理
           </router-link>
@@ -105,6 +108,7 @@ const navLinks = [
         {{ link.label }}
       </router-link>
       <template v-if="auth.isLoggedIn">
+        <router-link to="/messages" @click="mobileMenuOpen = false" class="block px-3 py-2 rounded-md text-blue-100 hover:text-white hover:bg-primary no-underline text-sm">私信</router-link>
         <router-link to="/admin" @click="mobileMenuOpen = false" class="block px-3 py-2 rounded-md text-blue-100 hover:text-white hover:bg-primary no-underline text-sm">管理后台</router-link>
         <router-link to="/profile/me" @click="mobileMenuOpen = false" class="block px-3 py-2 rounded-md text-blue-100 hover:text-white hover:bg-primary no-underline text-sm">个人中心</router-link>
         <button @click="onLogout(); mobileMenuOpen = false" class="w-full text-left px-3 py-2 rounded-md text-blue-100 hover:text-white hover:bg-primary bg-transparent border-0 text-sm cursor-pointer">退出</button>

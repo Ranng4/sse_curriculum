@@ -20,6 +20,8 @@ const routes = [
       { path: 'admin', name: 'admin-dashboard', component: () => import('@/views/admin/AdminDashboard.vue') },
       { path: 'admin/posts', name: 'admin-posts', component: () => import('@/views/admin/AdminPostsPage.vue') },
       { path: 'admin/users', name: 'admin-users', component: () => import('@/views/admin/AdminUsersPage.vue') },
+      { path: 'messages', name: 'message-inbox', component: () => import('@/views/messages/MessageInbox.vue') },
+      { path: 'messages/:partnerId', name: 'message-conversation', component: () => import('@/views/messages/ConversationPage.vue') },
     ],
   },
   {
