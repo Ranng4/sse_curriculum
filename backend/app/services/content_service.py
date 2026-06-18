@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.core.errors import UnauthorizedError, ValidationError
 from app.models.content import Comment, Post
+from app.services.content_filter import content_filter
 from app.repositories.content_repository import InMemoryContentRepository
 from app.repositories.forum_repository import InMemoryForumBoardRepository
 from app.repositories.social_repository import InMemorySocialRepository
@@ -43,6 +44,12 @@ class ContentService:
         ]
 
     def create_post(self, user_id: str, request: PostCreateRequest) -> PostView:
+        # Content moderation: check sensitive words
+        full_text = f"{request.title} {request.content}"
+        check = content_filter.check(full_text)
+        if not check.passed:
+            raise ValidationError(content_filter.get_violation_message(check))
+
         self.user_repository.get(user_id)
         board = self.forum_repository.get(request.board_id)
         if not board.is_active:
@@ -154,6 +161,11 @@ class ContentService:
         post_id: str,
         request: CommentCreateRequest,
     ) -> CommentView:
+        # Content moderation: check sensitive words
+        check = content_filter.check(request.content)
+        if not check.passed:
+            raise ValidationError(content_filter.get_violation_message(check))
+
         self.user_repository.get(user_id)
         self.content_repository.get_post(post_id)
         if request.parent_comment_id:
